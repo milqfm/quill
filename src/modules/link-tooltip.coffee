@@ -7,13 +7,13 @@ class LinkTooltip extends Tooltip
   @DEFAULTS:
     maxLength: 50
     template:
-     '<span class="title">Visit URL:&nbsp;</span>
+     '<span class="title">Link:</span>
       <a href="#" class="url" target="_blank" href="about:blank"></a>
       <input class="input" type="text">
-      <span>&nbsp;&#45;&nbsp;</span>
       <a href="javascript:;" class="change">Change</a>
-      <a href="javascript:;" class="remove">Remove</a>
-      <a href="javascript:;" class="done">Done</a>'
+      <a href="javascript:;" class="done">Save</a>
+      <a href="javascript:;" class="remove">Clear</a>
+      <a href="javascript:;" class="close">&#10005;</a>'
 
   @hotkeys:
     LINK: { key: 'K', metaKey: true }
@@ -39,6 +39,7 @@ class LinkTooltip extends Tooltip
         this.hide()
     )
     dom(@container.querySelector('.done')).on('click', _.bind(this.saveLink, this))
+    dom(@container.querySelector('.close')).on('click', _.bind(this.hide, this))
     dom(@container.querySelector('.remove')).on('click', =>
       this.removeLink(@range)
     )
@@ -48,8 +49,8 @@ class LinkTooltip extends Tooltip
     this.initTextbox(@textbox, this.saveLink, this.hide)
     dom(@textbox.parentNode).on('focusout', (event) =>
       # added to hide popup on focusout
-      relatedTarget = (event || window.event).relatedTarget;
-      if !relatedTarget || !dom(relatedTarget).isAncestor(@textbox.parentNode, true)
+      relatedTarget = (event || window.event).relatedTarget || document.querySelector(':focus');
+      if relatedTarget && !dom(relatedTarget).isAncestor(@textbox.parentNode, true)
         this.hide()
 	)
     @quill.onModuleLoad('toolbar', (toolbar) =>
