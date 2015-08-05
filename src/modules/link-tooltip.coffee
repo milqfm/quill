@@ -31,8 +31,9 @@ class LinkTooltip extends Tooltip
       return unless range? and range.isCollapsed()
       anchor = this._findAnchor(range)
       if anchor
-        this.setMode(anchor.href, false)
-        this.show(anchor)
+        # commented out to prevent the link popup appearing when not expected
+        # this.setMode(anchor.href, false)
+        # this.show(anchor)
       else if @container.style.left != Tooltip.HIDE_MARGIN
         @range = null   # Prevent restoring selection to last saved
         this.hide()
@@ -45,6 +46,12 @@ class LinkTooltip extends Tooltip
       this.setMode(@link.href, true)
     )
     this.initTextbox(@textbox, this.saveLink, this.hide)
+    dom(@textbox.parentNode).on('focusout', (event) =>
+      # added to hide popup on focusout
+      relatedTarget = (event || window.event).relatedTarget;
+      if !relatedTarget || !dom(relatedTarget).isAncestor(@textbox.parentNode, true)
+        this.hide()
+	)
     @quill.onModuleLoad('toolbar', (toolbar) =>
       @toolbar = toolbar
       toolbar.initFormat('link', _.bind(this._onToolbar, this))
@@ -57,8 +64,14 @@ class LinkTooltip extends Tooltip
     url = this._normalizeURL(@textbox.value)
     if @range?
       end = @range.end
+      anchor = this._findAnchor(@range)
+      if anchor
+        if !@textbox.value
+          #remove link on empty text
+          this.removeLink(@range)
+          return
+
       if @range.isCollapsed()
-        anchor = this._findAnchor(@range)
         anchor.href = url if anchor?
       else
         @quill.formatText(@range, 'link', url, 'user')
@@ -89,7 +102,9 @@ class LinkTooltip extends Tooltip
     dom(@container).toggleClass('editing', edit)
 
   _findAnchor: (range) ->
-    [leaf, offset] = @quill.editor.doc.findLeafAt(range.start, true)
+    # changed range.start to range.end because original code did not work
+    # in case when range includes the whole link
+    [leaf, offset] = @quill.editor.doc.findLeafAt(range.end, true)
     node = leaf.node if leaf?
     while node? and node != @quill.root
       return node if node.tagName == 'A'
@@ -111,8 +126,13 @@ class LinkTooltip extends Tooltip
 
   _toggle: (range, value) ->
     return unless range
-    if !value
-      this.removeLink(range)
+    anchor = this._findAnchor(range)
+    if !value && anchor
+      # prevent removing link on toggle
+      # instead, show link editor
+      # this.removeLink(range)
+      this.setMode(anchor.href, true)
+      return this.show(anchor)
     else if !range.isCollapsed()
       this.setMode(this._suggestURL(range), true)
       nativeRange = @quill.editor.selection._getNativeRange()
